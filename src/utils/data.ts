@@ -27,7 +27,10 @@ export async function onSubmitBundle(mode: FormMode, bundle: SingleBundle, previ
       if (item.name !== previousName) return item;
 
       // item found
-      return bundle;
+      return {
+        ...item,
+        ...bundle,
+      };
     });
     await save(newList);
   } else {
