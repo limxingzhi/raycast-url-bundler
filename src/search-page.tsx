@@ -1,11 +1,60 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, ReactElement } from "react";
 import { List, ActionPanel, Action, open, useNavigation, showToast } from "@raycast/api";
 import Fuse from "fuse.js";
 
 import { SingleBundle, SingleBundleCodec } from "./utils/schema";
-import { deleteBundle, getBundles } from "./utils/data";
+import { deleteBundle, getBundles, pinBundle } from "./utils/data";
 import BundlerForm from "./ui/form";
 import { fuseOptions } from "./utils/constants";
+
+const renderList = (
+  item: SingleBundle,
+  index: number,
+  refreshCallback: () => void,
+  push: (ui: ReactElement, callback: () => void) => void,
+) => (
+  <List.Item
+    key={item.name + "_" + index}
+    title={item.name}
+    subtitle={item.description}
+    accessories={[{ text: String(item.urls.length) }]}
+    actions={
+      <ActionPanel>
+        <Action title="Open URLs" onAction={() => item.urls.map((link) => open(link))} />
+        <Action
+          title="Edit Bundle"
+          onAction={() => {
+            push(<BundlerForm mode="EDIT" defaults={SingleBundleCodec.decode(item)} />, refreshCallback);
+          }}
+        />
+        <Action
+          title="Delete Bundle"
+          onAction={() => {
+            deleteBundle(item.name)
+              .then(() =>
+                showToast({
+                  title: `${item.name} deleted.`,
+                }),
+              )
+              .then(refreshCallback);
+          }}
+        />
+        <Action
+          title="Pin Bundle"
+          onAction={() => {
+            pinBundle(item.name)
+              .then(() =>
+                showToast({
+                  title: `${item.name} pinned.`,
+                }),
+              )
+              .then(refreshCallback);
+          }}
+        />
+      </ActionPanel>
+    }
+  />
+);
 
 export default function SearchPage() {
   const [searchText, setSearchText] = useState("");
@@ -20,8 +69,14 @@ export default function SearchPage() {
   const fuse = useMemo(() => new Fuse(serializedBundles, fuseOptions), [serializedBundles]);
 
   // filter items against search text and parse back into usable object
-  const filteredBundles = useMemo<Array<SingleBundle>>(() => {
-    return searchText.length > 0 ? fuse.search(searchText).map(({ item }) => SingleBundleCodec.encode(item)) : bundles;
+  const filteredBundles = useMemo<{ pinned: Array<SingleBundle>; unpinned: Array<SingleBundle> }>(() => {
+    const all =
+      searchText.length > 0 ? fuse.search(searchText).map(({ item }) => SingleBundleCodec.encode(item)) : bundles;
+
+    const pinnedItems = all.filter((item) => item.pinned);
+    const unpinnedItems = all.filter((item) => !item.pinned);
+
+    return { pinned: pinnedItems, unpinned: unpinnedItems };
   }, [fuse, searchText]);
 
   // index to reset the list after an action
@@ -36,38 +91,15 @@ export default function SearchPage() {
 
   return (
     <List searchText={searchText} onSearchTextChange={setSearchText} navigationTitle="Fuzzy search bundles">
+      <List.Section title="Pinned Bundles">
+        {filteredBundles.pinned.map((item, index) => {
+          return renderList(item, index, refreshList, push);
+        })}
+      </List.Section>
       <List.Section title="Bundles">
-        {filteredBundles.map((item, index) => (
-          <List.Item
-            key={item.name + "_" + index}
-            title={item.name}
-            subtitle={item.description}
-            accessories={[{ text: String(item.urls.length) }]}
-            actions={
-              <ActionPanel>
-                <Action title="Open URLs" onAction={() => item.urls.map((link) => open(link))} />
-                <Action
-                  title="Edit Bundle"
-                  onAction={() => {
-                    push(<BundlerForm mode="EDIT" defaults={SingleBundleCodec.decode(item)} />, refreshList);
-                  }}
-                />
-                <Action
-                  title="Delete Bundle"
-                  onAction={() => {
-                    deleteBundle(item.name)
-                      .then(() =>
-                        showToast({
-                          title: `${item.name} deleted.`,
-                        }),
-                      )
-                      .then(refreshList);
-                  }}
-                />
-              </ActionPanel>
-            }
-          />
-        ))}
+        {filteredBundles.unpinned.map((item, index) => {
+          return renderList(item, index, refreshList, push);
+        })}
       </List.Section>
     </List>
   );

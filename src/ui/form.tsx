@@ -17,11 +17,10 @@ export default function BundlerForm({ mode, defaults }: BundlerFormProps) {
 
   const [error, setError] = useState<Record<string, string>>({});
   const submit = useCallback(
-    (formState: FormInput) => {
+    async (formState: FormInput) => {
       try {
         const encodedState = SingleBundleCodec.encode(formState);
-
-        onSubmitBundle(mode, encodedState, defaults?.name).then(() => {
+        await onSubmitBundle(mode, encodedState, defaults?.name).then(() => {
           showToast({
             title: mode,
             message: `${encodedState.name} ${mode.toLocaleLowerCase()}ed with ${encodedState.urls.length} items`,
@@ -29,14 +28,23 @@ export default function BundlerForm({ mode, defaults }: BundlerFormProps) {
 
           pop(); // go back up the UI
         });
-      } catch (e: unknown) {
+      } catch (e: any) {
         const errorOutput: Record<string, string> = {};
 
-        (e as ZodError).issues.map((item) => {
-          const path = item.path[0] as string;
-          errorOutput[path] = item.message;
-        });
-        setError(errorOutput);
+        if (Array.isArray(e)) {
+          // error is an list off issues
+          e.map((item) => {
+            const path = item.path[0] as string;
+            errorOutput[path] = item.message;
+          });
+        } else {
+          // error is an object
+          (e as ZodError).issues.map((item) => {
+            const path = item.path[0] as string;
+            errorOutput[path] = item.message;
+          });
+          setError(errorOutput);
+        }
       }
     },
     [mode, pop],
