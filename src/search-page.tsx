@@ -23,6 +23,7 @@ const renderList = (
         <Action title="Open URLs" onAction={() => item.urls.map((link) => open(link))} />
         <Action
           title="Edit Bundle"
+          shortcut={{ modifiers: ["cmd"], key: "i" }}
           onAction={() => {
             push(<BundlerForm mode="EDIT" defaults={SingleBundleCodec.decode(item)} />, refreshCallback);
           }}
@@ -39,18 +40,35 @@ const renderList = (
               .then(refreshCallback);
           }}
         />
-        <Action
-          title="Pin Bundle"
-          onAction={() => {
-            pinBundle(item.name)
-              .then(() =>
-                showToast({
-                  title: `${item.name} pinned.`,
-                }),
-              )
-              .then(refreshCallback);
-          }}
-        />
+        {item.pinned ? (
+          <Action
+            title="Unpin Bundle"
+            shortcut={{ modifiers: ["cmd"], key: "m" }}
+            onAction={() => {
+              pinBundle(item.name, false)
+                .then(() =>
+                  showToast({
+                    title: `${item.name} unpinned.`,
+                  }),
+                )
+                .then(refreshCallback);
+            }}
+          />
+        ) : (
+          <Action
+            title="Pin Bundle"
+            shortcut={{ modifiers: ["cmd"], key: "m" }}
+            onAction={() => {
+              pinBundle(item.name)
+                .then(() =>
+                  showToast({
+                    title: `${item.name} pinned.`,
+                  }),
+                )
+                .then(refreshCallback);
+            }}
+          />
+        )}
       </ActionPanel>
     }
   />
