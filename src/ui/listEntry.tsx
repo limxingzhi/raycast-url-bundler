@@ -1,18 +1,18 @@
-import { ReactElement } from "react";
-import { List, ActionPanel, Action, open, showToast, Icon, Color } from "@raycast/api";
+import { List, ActionPanel, Action, open, showToast, Icon, Color, useNavigation } from "@raycast/api";
 
 import { SingleBundle, SingleBundleCodec } from "../utils/schema";
-import { deleteBundle, pinBundle } from "../utils/data";
+import { deleteBundle, pinBundle, moveTop, moveBottom } from "../utils/data";
 import BundlerForm from "./form";
 
 interface ListEntryProps {
   item: SingleBundle;
   index: number;
+  listLength: number;
   refreshCallback: () => void;
-  push: (ui: ReactElement, callback: () => void) => void;
 }
 
-export default function ListEntry({ item, index, refreshCallback, push }: ListEntryProps) {
+export default function ListEntry({ item, index, refreshCallback, listLength }: ListEntryProps) {
+  const { push } = useNavigation();
   return (
     <List.Item
       key={item.name + "_" + index}
@@ -37,6 +37,7 @@ export default function ListEntry({ item, index, refreshCallback, push }: ListEn
           />
           <ActionPanel.Submenu title="Delete Bundle" icon={Icon.Trash} shortcut={{ modifiers: ["cmd"], key: "d" }}>
             <Action
+              style={Action.Style.Destructive}
               icon={{ source: Icon.Warning, tintColor: Color.Red }}
               title="Confirm Delete (this is irreversible)"
               shortcut={{ modifiers: ["cmd"], key: "y" }}
@@ -58,40 +59,57 @@ export default function ListEntry({ item, index, refreshCallback, push }: ListEn
               autoFocus
             />
           </ActionPanel.Submenu>
-          {item.pinned ? (
-            <Action
-              icon={Icon.TackDisabled}
-              title="Unpin Bundle"
-              shortcut={{ modifiers: ["cmd"], key: "m" }}
-              onAction={() => {
-                pinBundle(item.name, false)
-                  .then(() =>
-                    showToast({
-                      title: `${item.name} unpinned.`,
-                    }),
-                  )
-                  .then(refreshCallback);
-              }}
-            />
-          ) : (
-            <Action
-              icon={Icon.Tack}
-              title="Pin Bundle"
-              shortcut={{ modifiers: ["cmd"], key: "m" }}
-              onAction={() => {
-                pinBundle(item.name)
-                  .then(() =>
-                    showToast({
-                      title: `${item.name} pinned.`,
-                    }),
-                  )
-                  .then(refreshCallback);
-              }}
-            />
-          )}
+          <ActionPanel.Section title="Positioning">
+            {item.pinned ? (
+              <Action
+                icon={Icon.TackDisabled}
+                title="Unpin Bundle"
+                shortcut={{ modifiers: ["cmd"], key: "m" }}
+                onAction={() => {
+                  pinBundle(item.name, false)
+                    .then(() =>
+                      showToast({
+                        title: `${item.name} unpinned.`,
+                      }),
+                    )
+                    .then(refreshCallback);
+                }}
+              />
+            ) : (
+              <Action
+                icon={Icon.Tack}
+                title="Pin Bundle"
+                shortcut={{ modifiers: ["cmd"], key: "m" }}
+                onAction={() => {
+                  pinBundle(item.name)
+                    .then(() =>
+                      showToast({
+                        title: `${item.name} pinned.`,
+                      }),
+                    )
+                    .then(refreshCallback);
+                }}
+              />
+            )}
+            {index !== 0 && (
+              <Action
+                icon={{ source: Icon.ArrowUp }}
+                title="Move to Top"
+                onAction={() => moveTop(item.name).then(refreshCallback)}
+                shortcut={{ modifiers: ["cmd"], key: "g" }}
+              />
+            )}
+            {index + 1 < listLength && (
+              <Action
+                icon={{ source: Icon.ArrowDown }}
+                title="Move to Bottom"
+                onAction={() => moveBottom(item.name).then(refreshCallback)}
+                shortcut={{ modifiers: ["shift", "cmd"], key: "g" }}
+              />
+            )}
+          </ActionPanel.Section>
         </ActionPanel>
       }
     />
   );
 }
-

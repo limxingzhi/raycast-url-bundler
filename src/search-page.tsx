@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from "react";
-import { List, useNavigation } from "@raycast/api";
+import { List } from "@raycast/api";
 import Fuse from "fuse.js";
 
 import { SingleBundle, SingleBundleCodec } from "./utils/schema";
@@ -34,8 +34,6 @@ export default function SearchPage() {
   const [listKey, setListKey] = useState(0);
   const refreshList = () => setListKey((val) => val + 1);
 
-  const { push } = useNavigation();
-
   useEffect(() => {
     getBundles().then(setBundles);
   }, [listKey]);
@@ -45,7 +43,13 @@ export default function SearchPage() {
     return (
       <List searchText={searchText} onSearchTextChange={setSearchText} navigationTitle="Fuzzy search bundles">
         {filteredBundles.all.map((item, index) => (
-          <ListEntry item={item} index={index} refreshCallback={refreshList} push={push} />
+          <ListEntry
+            key={item.name + "_index"}
+            item={item}
+            index={index}
+            refreshCallback={refreshList}
+            listLength={filteredBundles.all.length}
+          />
         ))}
       </List>
     );
@@ -55,12 +59,24 @@ export default function SearchPage() {
       <List searchText={searchText} onSearchTextChange={setSearchText} navigationTitle="Fuzzy search bundles">
         <List.Section title="Pinned Bundles" subtitle={`${filteredBundles.pinned.length} items`}>
           {filteredBundles.pinned.map((item, index) => (
-            <ListEntry item={item} index={index} refreshCallback={refreshList} push={push} />
+            <ListEntry
+              key={item.name + "_index"}
+              item={item}
+              index={index}
+              refreshCallback={refreshList}
+              listLength={filteredBundles.pinned.length}
+            />
           ))}
         </List.Section>
         <List.Section title="Bundles" subtitle={`${filteredBundles.unpinned.length} items`}>
           {filteredBundles.unpinned.map((item, index) => (
-            <ListEntry item={item} index={index} refreshCallback={refreshList} push={push} />
+            <ListEntry
+              key={item.name + "_index"}
+              item={item}
+              index={index}
+              refreshCallback={refreshList}
+              listLength={filteredBundles.unpinned.length}
+            />
           ))}
         </List.Section>
       </List>

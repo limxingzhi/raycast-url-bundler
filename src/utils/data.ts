@@ -20,11 +20,16 @@ async function save(list: Array<SingleBundle>) {
   return await LocalStorage.setItem(BUNDLE_KEY, JSON.stringify(parsedList));
 }
 
-export async function onSubmitBundle(mode: FormMode, bundle: SingleBundle, previousName?: string): Promise<void> {
+export async function onSubmitBundle(
+  mode: FormMode,
+  bundle: SingleBundle,
+  previousName?: string,
+  overrideLastUpdated = true,
+): Promise<void> {
   const list = await getBundles();
 
   // set the last updated time
-  bundle.lastUpdated = Date.now();
+  if (overrideLastUpdated) bundle.lastUpdated = Date.now();
 
   if (mode == "ADD") {
     await save([...list, bundle]);
@@ -59,4 +64,31 @@ export async function pinBundle(bundleName: string, pinned = true): Promise<void
   updatedBundle.pinned = pinned;
 
   await onSubmitBundle("EDIT", updatedBundle, bundleName);
+}
+
+export async function moveTop(bundleName: string): Promise<void> {
+  // find the corresponding bundle
+  const bundle = (await getBundles()).find((item) => item.name === bundleName);
+
+  // bundle must exist
+  if (!bundle) throw "Bundle not found";
+
+  // an edit overrides the lastUpdated by default and
+  // will be sorted accordingly before saving to store
+  await onSubmitBundle("EDIT", bundle, bundleName);
+}
+
+export async function moveBottom(bundleName: string): Promise<void> {
+  // find the corresponding bundle
+  const bundle = (await getBundles()).find((item) => item.name === bundleName);
+
+  // find the last bundle
+  const bottomBundle = (await getBundles()).at(-1);
+
+  // bundles must exist
+  if (!bundle) throw "Bundle not found";
+  if (!bottomBundle) throw "Bottom bundle not found";
+
+  // override bundle with a lastUdpated timing that is smaller than the botom bundle
+  await onSubmitBundle("EDIT", { ...bundle, lastUpdated: bottomBundle.lastUpdated - 1000 }, bundle.name, false);
 }
