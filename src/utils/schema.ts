@@ -5,6 +5,7 @@ export const FormInputSchema = z.object({
   name: z.string(),
   urls: z.string(),
   pinned: z.boolean().optional(),
+  lastUpdated: z.number().optional(),
 });
 
 export const SingleBundleSchema = z.object({
@@ -12,13 +13,14 @@ export const SingleBundleSchema = z.object({
   description: z.string(),
   urls: z.array(z.string().min(1)).min(1),
   pinned: z.boolean().optional(),
+  lastUpdated: z.number(),
 });
 
 export const SingleBundleCodec = z.codec(
   SingleBundleSchema, // parsed schema
   FormInputSchema, // serialized schema
   {
-    encode: (formInput) => ({ ...formInput, urls: formInput.urls.split("\n") }),
+    encode: (formInput) => ({ lastUpdated: 0, ...formInput, urls: formInput.urls.split("\n") }),
     decode: (singleBundle) => ({ ...singleBundle, urls: singleBundle.urls.join("\n") }),
   },
 );

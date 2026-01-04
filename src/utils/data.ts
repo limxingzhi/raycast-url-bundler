@@ -6,11 +6,15 @@ import { BUNDLE_KEY } from "./constants";
 
 export async function getBundles(): Promise<Array<SingleBundle>> {
   const listStringified = await LocalStorage.getItem<string>(BUNDLE_KEY);
+
   return z.array(SingleBundleSchema).parse(JSON.parse(listStringified ?? "[]"));
 }
 
 async function save(list: Array<SingleBundle>) {
   const parsedList = await BundleStoreSchema.parseAsync(list);
+
+  // sort list by last-updated before saving
+  parsedList.sort((a, b) => b.lastUpdated - a.lastUpdated);
 
   // validating unique keys before saving
   return await LocalStorage.setItem(BUNDLE_KEY, JSON.stringify(parsedList));
@@ -18,6 +22,9 @@ async function save(list: Array<SingleBundle>) {
 
 export async function onSubmitBundle(mode: FormMode, bundle: SingleBundle, previousName?: string): Promise<void> {
   const list = await getBundles();
+
+  // set the last updated time
+  bundle.lastUpdated = Date.now();
 
   if (mode == "ADD") {
     await save([...list, bundle]);

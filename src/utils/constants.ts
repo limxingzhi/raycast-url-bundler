@@ -15,7 +15,7 @@ export const IGNORE_PIN_THRESHOLD: number = (() => {
 
 // https://www.fusejs.io/concepts/scoring-theory.html
 export const fuseOptions = {
-  isCaseSensitive: true,
+  isCaseSensitive: false,
   shouldSort: true,
   fieldNormWeight: 1,
   keys: [
