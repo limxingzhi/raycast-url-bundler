@@ -1,11 +1,11 @@
 import { useEffect, useState, useMemo, ReactElement } from "react";
-import { List, ActionPanel, Action, open, useNavigation, showToast } from "@raycast/api";
+import { List, ActionPanel, Action, open, useNavigation, showToast, Icon } from "@raycast/api";
 import Fuse from "fuse.js";
 
 import { SingleBundle, SingleBundleCodec } from "./utils/schema";
 import { deleteBundle, getBundles, pinBundle } from "./utils/data";
 import BundlerForm from "./ui/form";
-import { fuseOptions } from "./utils/constants";
+import { fuseOptions, IGNORE_PIN_THRESHOLD } from "./utils/constants";
 
 const renderList = (
   item: SingleBundle,
@@ -17,7 +17,7 @@ const renderList = (
     key={item.name + "_" + index}
     title={item.name}
     subtitle={item.description}
-    accessories={[{ text: String(item.urls.length) }]}
+    accessories={[{ text: String(item.urls.length), icon: item.pinned ? Icon.Tack : undefined }]}
     actions={
       <ActionPanel>
         <Action title="Open URLs" onAction={() => item.urls.map((link) => open(link))} />
@@ -87,14 +87,14 @@ export default function SearchPage() {
   const fuse = useMemo(() => new Fuse(serializedBundles, fuseOptions), [serializedBundles]);
 
   // filter items against search text and parse back into usable object
-  const filteredBundles = useMemo<{ pinned: Array<SingleBundle>; unpinned: Array<SingleBundle> }>(() => {
+  const filteredBundles = useMemo(() => {
     const all =
       searchText.length > 0 ? fuse.search(searchText).map(({ item }) => SingleBundleCodec.encode(item)) : bundles;
 
     const pinnedItems = all.filter((item) => item.pinned);
     const unpinnedItems = all.filter((item) => !item.pinned);
 
-    return { pinned: pinnedItems, unpinned: unpinnedItems };
+    return { pinned: pinnedItems, unpinned: unpinnedItems, all };
   }, [fuse, searchText]);
 
   // index to reset the list after an action
@@ -107,18 +107,30 @@ export default function SearchPage() {
     getBundles().then(setBundles);
   }, [listKey]);
 
-  return (
-    <List searchText={searchText} onSearchTextChange={setSearchText} navigationTitle="Fuzzy search bundles">
-      <List.Section title="Pinned Bundles">
-        {filteredBundles.pinned.map((item, index) => {
+  if (searchText.length > IGNORE_PIN_THRESHOLD) {
+    // render unpinned list
+    return (
+      <List searchText={searchText} onSearchTextChange={setSearchText} navigationTitle="Fuzzy search bundles">
+        {filteredBundles.all.map((item, index) => {
           return renderList(item, index, refreshList, push);
         })}
-      </List.Section>
-      <List.Section title="Bundles">
-        {filteredBundles.unpinned.map((item, index) => {
-          return renderList(item, index, refreshList, push);
-        })}
-      </List.Section>
-    </List>
-  );
+      </List>
+    );
+  } else {
+    // render pinned list with sections
+    return (
+      <List searchText={searchText} onSearchTextChange={setSearchText} navigationTitle="Fuzzy search bundles">
+        <List.Section title="Pinned Bundles">
+          {filteredBundles.pinned.map((item, index) => {
+            return renderList(item, index, refreshList, push);
+          })}
+        </List.Section>
+        <List.Section title="Bundles">
+          {filteredBundles.unpinned.map((item, index) => {
+            return renderList(item, index, refreshList, push);
+          })}
+        </List.Section>
+      </List>
+    );
+  }
 }

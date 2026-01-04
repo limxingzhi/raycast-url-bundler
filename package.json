@@ -13,7 +13,15 @@
     "Productivity"
   ],
   "license": "MIT",
-  "preferences": [],
+  "preferences": [
+    {
+      "name": "ignore_pin_threshold",
+      "title": "Ignore pinned threshold, recommended 4",
+      "type": "textfield",
+      "description": "Threshold to start ignoring the pin fields",
+      "required": true
+    }
+  ],
   "commands": [
     {
       "name": "add-page",
