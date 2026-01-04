@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo, ReactElement } from "react";
-import { List, ActionPanel, Action, open, useNavigation, showToast, Icon } from "@raycast/api";
+import { List, ActionPanel, Action, open, useNavigation, showToast, Icon, Color } from "@raycast/api";
 import Fuse from "fuse.js";
 
 import { SingleBundle, SingleBundleCodec } from "./utils/schema";
@@ -34,19 +34,28 @@ const renderList = (
           content={item.urls.join("\n")}
           shortcut={{ modifiers: ["cmd"], key: "y" }}
         />
-        <Action
-          icon={Icon.Trash}
-          title="Delete Bundle"
-          onAction={() => {
-            deleteBundle(item.name)
-              .then(() =>
-                showToast({
-                  title: `${item.name} deleted.`,
-                }),
-              )
-              .then(refreshCallback);
-          }}
-        />
+        <ActionPanel.Submenu title="Delete Bundle" icon={Icon.Trash} shortcut={{ modifiers: ["cmd"], key: "d" }}>
+          <Action
+            icon={{ source: Icon.Warning, tintColor: Color.Red }}
+            title="Confirm Delete (this is irreversible)"
+            shortcut={{ modifiers: ["cmd"], key: "y" }}
+            onAction={() => {
+              deleteBundle(item.name)
+                .then(() =>
+                  showToast({
+                    title: `${item.name} deleted.`,
+                  }),
+                )
+                .then(refreshCallback);
+            }}
+          />
+          <Action
+            icon={{ source: Icon.Undo }}
+            title="Dismiss"
+            onAction={refreshCallback}
+            shortcut={{ modifiers: ["cmd"], key: "n" }}
+          />
+        </ActionPanel.Submenu>
         {item.pinned ? (
           <Action
             icon={Icon.TackDisabled}
@@ -129,12 +138,12 @@ export default function SearchPage() {
     // render pinned list with sections
     return (
       <List searchText={searchText} onSearchTextChange={setSearchText} navigationTitle="Fuzzy search bundles">
-        <List.Section title="Pinned Bundles">
+        <List.Section title="Pinned Bundles" subtitle={`${filteredBundles.pinned.length} items`}>
           {filteredBundles.pinned.map((item, index) => {
             return renderList(item, index, refreshList, push);
           })}
         </List.Section>
-        <List.Section title="Bundles">
+        <List.Section title="Bundles" subtitle={`${filteredBundles.unpinned.length} items`}>
           {filteredBundles.unpinned.map((item, index) => {
             return renderList(item, index, refreshList, push);
           })}
