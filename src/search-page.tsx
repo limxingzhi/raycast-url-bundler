@@ -20,15 +20,22 @@ const renderList = (
     accessories={[{ text: String(item.urls.length), icon: item.pinned ? Icon.Tack : undefined }]}
     actions={
       <ActionPanel>
-        <Action title="Open URLs" onAction={() => item.urls.map((link) => open(link))} />
+        <Action icon={Icon.Compass} title="Open URLs" onAction={() => item.urls.map((link) => open(link))} />
         <Action
+          icon={Icon.Pencil}
           title="Edit Bundle"
           shortcut={{ modifiers: ["cmd"], key: "i" }}
           onAction={() => {
             push(<BundlerForm mode="EDIT" defaults={SingleBundleCodec.decode(item)} />, refreshCallback);
           }}
         />
+        <Action.CopyToClipboard
+          title="Copy Bundle"
+          content={item.urls.join("\n")}
+          shortcut={{ modifiers: ["cmd"], key: "y" }}
+        />
         <Action
+          icon={Icon.Trash}
           title="Delete Bundle"
           onAction={() => {
             deleteBundle(item.name)
@@ -42,6 +49,7 @@ const renderList = (
         />
         {item.pinned ? (
           <Action
+            icon={Icon.TackDisabled}
             title="Unpin Bundle"
             shortcut={{ modifiers: ["cmd"], key: "m" }}
             onAction={() => {
@@ -56,6 +64,7 @@ const renderList = (
           />
         ) : (
           <Action
+            icon={Icon.Tack}
             title="Pin Bundle"
             shortcut={{ modifiers: ["cmd"], key: "m" }}
             onAction={() => {
