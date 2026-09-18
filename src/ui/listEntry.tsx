@@ -15,7 +15,8 @@ export default function ListEntry({ item, index, refreshCallback, listLength }: 
   const { push } = useNavigation();
   return (
     <List.Item
-      key={item.name + "_" + index}
+      key={item.name}
+      id={item.name}
       title={item.name}
       subtitle={item.description}
       accessories={[{ text: String(item.urls.length), icon: item.pinned ? Icon.Tack : undefined }]}
