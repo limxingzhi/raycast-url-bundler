@@ -1,0 +1,67 @@
+# AGENTS.md
+
+## Overview
+
+A personal [Raycast](https://www.raycast.com/) extension (`links-bundler`) that stores named bundles of URLs, lets you fuzzy-search them, and opens a whole bundle at once. Two commands are exposed:
+
+- `add-page` (`src/add-page.tsx`) - add a bundle
+- `search-page` (`src/search-page.tsx`) - search / manage bundles
+
+Raycast requires each command's `name` in `package.json` to have a matching `src/<name>.tsx` entry point. Renaming a command file means renaming it in `package.json` too.
+
+## Commands
+
+```bash
+npm install        # install deps (node_modules is not committed)
+npm run build      # ray build
+npm run dev        # ray develop (live-reloading dev server in Raycast)
+npm run lint       # ray lint
+npm run fix-lint   # ray lint --fix
+npm test           # vitest run (pure unit tests, works off-Raycast)
+npm run test:watch # vitest (watch mode)
+npm run publish    # npx @raycast/api@latest publish
+```
+
+Important: `build`/`dev`/`lint` all shell out to the `ray` CLI, which only runs on macOS/Windows. `npm test` (vitest) runs anywhere and is the way to verify logic without Raycast; test files live next to the module as `*.test.ts`.
+
+## Architecture
+
+- `src/utils/schema.ts` - zod v4 schemas and the codec (see below).
+- `src/utils/data.ts` - all persistence CRUD against Raycast `LocalStorage`.
+- `src/utils/constants.ts` - storage key, the pin-threshold preference, and Fuse.js options.
+- `src/ui/form.tsx` - shared add/edit form (`mode: "ADD" | "EDIT"`).
+- `src/ui/listEntry.tsx` - a single search-result row plus its action panel.
+
+Storage key is `bundle_all` (see `BUNDLE_KEY` in `src/utils/constants.ts`). Bundles are persisted as a JSON string via Raycast's `LocalStorage`; there is no database. `getBundles()` `.parse`s the stored JSON on read, and `save()` (private) validates via `BundleStoreSchema` before writing.
+
+### Two representations of a bundle
+
+This is the central non-obvious pattern. A bundle exists in two shapes and is converted with `SingleBundleCodec`:
+
+- `SingleBundleSchema` (storage): `urls: string[]`, always has a numeric `lastUpdated`.
+- `FormInputSchema` (form): `urls` is a single newline-separated `string`; `lastUpdated` optional.
+
+`SingleBundleCodec.encode` splits `urls` on `\n` and injects `lastUpdated: 0`; `decode` joins `urls` with `\n`. The search page works with both: it holds decoded (storage) objects in state and `decode`s them again to feed Fuse, then `encode`s matches back for rendering. When touching URL handling, change the codec rather than splitting/joining at call sites.
+
+### Ordering and pinning
+
+- `save()` sorts the stored list by `lastUpdated` descending. Display order therefore derives from `lastUpdated`, not array position.
+- `moveTop`/`moveBottom` (`src/utils/data.ts`) reorder by rewriting `lastUpdated`. `moveBottom` passes `overrideLastUpdated = false` and sets `lastUpdated` to `bottomBundle.lastUpdated - 1000` to force the item last. `onSubmitBundle` otherwise stamps `Date.now()`.
+- Pinned items are **not** stored separately; they are partitioned at render time in `search-page.tsx` into "Pinned Bundles" / "Bundles" sections.
+- `IGNORE_PIN_THRESHOLD` in `constants.ts` is evaluated once at module load from the `ignore_pin_threshold` preference and is stored as `value - 1`. When `searchText.length > IGNORE_PIN_THRESHOLD`, the search page drops the pinned/unpinned split and renders one flat list. To change this behavior you must edit both the constant computation and the two branches in `search-page.tsx`.
+- Duplicate bundle names are rejected at save time by the `.refine` in `BundleStoreSchema` (message: "Bundle already exist, please use another name."). There is no separate uniqueness check elsewhere.
+- List selection is **controlled**, not left to Raycast. Each `List.Item` gets `id={item.name}`, and the `List` gets `selectedItemId` + `onSelectionChange`. `resolveSelection` (`src/utils/selection.ts`) selects the first displayed item whenever `searchText` changes, and otherwise keeps the user's choice while it is still in the results. Without this, Raycast's implicit selection sticks to a stale item after the pinned/flat switch and Enter opens the wrong bundle.
+
+### Preferences
+
+`ignore_pin_threshold` (a required text field) is declared in `package.json` under `preferences`. It is read via `getPreferenceValues()` in `constants.ts`. If it is not a number, the code shows an error HUD, opens preferences, and falls back to `4-1`.
+
+## Conventions and gotchas
+
+- Formatting is Prettier with `printWidth: 120` and **double quotes** (`singleQuote: false` in `.prettierrc`). Match this; the codebase uses 2-space indentation.
+- ESLint extends `@raycast/eslint-config` with `@typescript-eslint/no-explicit-any` downgraded to `warn`. `any` appears in `form.tsx`'s catch handler, so warnings there are expected.
+- TypeScript is `strict`, `jsx: react-jsx`, `module: commonjs`.
+- `raycast-env.d.ts` is gitignored and generated by the Raycast CLI; a fresh checkout will not have it until `ray build`/`ray develop` runs, which can make typechecking fail locally.
+- Form submit errors are caught in `ui/form.tsx` and mapped to per-field messages, but note the `setError` call lives only in the non-array branch - the `Array.isArray(e)` branch builds `errorOutput` and then drops it. Preserve or intentionally fix this; don't assume field errors always render.
+- Actions in `ui/listEntry.tsx` follow a `.then(showToast).then(refreshCallback)` chain. `refreshCallback` bumps `listKey` in `search-page.tsx`, which re-runs the `getBundles()` effect. Any new mutation should call `refreshCallback` so the list updates.
+- There is no CI and no deploy step beyond Raycast's own `publish`; unit tests run with vitest (see Commands).

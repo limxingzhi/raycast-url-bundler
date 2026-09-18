@@ -5,6 +5,7 @@ import Fuse from "fuse.js";
 import { SingleBundle, SingleBundleCodec } from "./utils/schema";
 import { getBundles } from "./utils/data";
 import { fuseOptions, IGNORE_PIN_THRESHOLD } from "./utils/constants";
+import { resolveSelection, type SelectionState } from "./utils/selection";
 import ListEntry from "./ui/listEntry";
 
 export default function SearchPage() {
@@ -38,13 +39,31 @@ export default function SearchPage() {
     getBundles().then(setBundles);
   }, [listKey]);
 
-  if (searchText.length > IGNORE_PIN_THRESHOLD) {
+  const ignorePins = searchText.length > IGNORE_PIN_THRESHOLD;
+
+  const [selection, setSelection] = useState<SelectionState>({ query: searchText, id: undefined });
+
+  const displayedBundles = ignorePins ? filteredBundles.all : [...filteredBundles.pinned, ...filteredBundles.unpinned];
+  const selectedItemId = resolveSelection(
+    selection,
+    searchText,
+    displayedBundles.map((item) => item.name),
+  );
+  const onSelectionChange = (id: string | null) => setSelection({ query: searchText, id: id ?? undefined });
+
+  if (ignorePins) {
     // render unpinned list
     return (
-      <List searchText={searchText} onSearchTextChange={setSearchText} navigationTitle="Fuzzy search bundles">
+      <List
+        searchText={searchText}
+        onSearchTextChange={setSearchText}
+        selectedItemId={selectedItemId}
+        onSelectionChange={onSelectionChange}
+        navigationTitle="Fuzzy search bundles"
+      >
         {filteredBundles.all.map((item, index) => (
           <ListEntry
-            key={item.name + "_index"}
+            key={item.name}
             item={item}
             index={index}
             refreshCallback={refreshList}
@@ -56,11 +75,17 @@ export default function SearchPage() {
   } else {
     // render pinned list with sections
     return (
-      <List searchText={searchText} onSearchTextChange={setSearchText} navigationTitle="Fuzzy search bundles">
+      <List
+        searchText={searchText}
+        onSearchTextChange={setSearchText}
+        selectedItemId={selectedItemId}
+        onSelectionChange={onSelectionChange}
+        navigationTitle="Fuzzy search bundles"
+      >
         <List.Section title="Pinned Bundles" subtitle={`${filteredBundles.pinned.length} items`}>
           {filteredBundles.pinned.map((item, index) => (
             <ListEntry
-              key={item.name + "_index"}
+              key={item.name}
               item={item}
               index={index}
               refreshCallback={refreshList}
@@ -71,7 +96,7 @@ export default function SearchPage() {
         <List.Section title="Bundles" subtitle={`${filteredBundles.unpinned.length} items`}>
           {filteredBundles.unpinned.map((item, index) => (
             <ListEntry
-              key={item.name + "_index"}
+              key={item.name}
               item={item}
               index={index}
               refreshCallback={refreshList}
