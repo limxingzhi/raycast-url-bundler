@@ -7,7 +7,7 @@ export const IGNORE_PIN_THRESHOLD: number = (() => {
   if (isNaN(result)) {
     showHUD("ERROR: Threshold must be a number");
     openExtensionPreferences();
-    return 4-1;
+    return 4 - 1;
   }
 
   return result - 1;
