@@ -119,15 +119,25 @@ describe("BundlerForm", () => {
     expect(mocks.showToast).not.toHaveBeenCalled();
   });
 
-  it("rejects from the catch handler for a non zod rejection", async () => {
-    mocks.onSubmitBundle.mockRejectedValueOnce("something went wrong");
+  it("rethrows a non validation rejection unchanged", async () => {
+    const original = new Error("storage unavailable");
+    mocks.onSubmitBundle.mockRejectedValueOnce(original);
     const { root } = await render("EDIT", defaults);
     const submitAction = actionElements(root, "Save");
     if (!submitAction) throw new Error("no save action");
 
     const onSubmit = submitAction.props.onSubmit as (values: unknown) => Promise<unknown>;
-    await expect(onSubmit({ name: "Dev", description: "", urls: "https://a.com" })).rejects.toBeInstanceOf(TypeError);
+    await expect(onSubmit({ name: "Dev", description: "", urls: "https://a.com" })).rejects.toBe(original);
     expect(mocks.pop).not.toHaveBeenCalled();
+    expect(mocks.showToast).not.toHaveBeenCalled();
+  });
+
+  it("maps a bare issues array to per field errors", async () => {
+    mocks.onSubmitBundle.mockRejectedValueOnce([{ code: "custom", message: "taken", path: ["name"] }]);
+    const { root } = await render("ADD");
+    await submit(root, { name: "Dup", description: "d", urls: "https://a.com" });
+
+    expect(hostByProp(root, { id: "name" })[0].props.error).toBe("taken");
   });
 
   it("maps zod issues to per field errors", async () => {

@@ -1,4 +1,4 @@
-import { List, ActionPanel, Action, open, showToast, Icon, Color, useNavigation } from "@raycast/api";
+import { List, ActionPanel, Action, open, showToast, Icon, Color, Keyboard, useNavigation } from "@raycast/api";
 
 import { SingleBundle, SingleBundleCodec } from "../utils/schema";
 import { deleteBundle, pinBundle, moveTop, moveBottom } from "../utils/data";
@@ -26,7 +26,7 @@ export default function ListEntry({ item, index, refreshCallback, listLength }: 
           <Action
             icon={Icon.Pencil}
             title="Edit Bundle"
-            shortcut={{ modifiers: ["cmd"], key: "i" }}
+            shortcut={Keyboard.Shortcut.Common.Edit}
             onAction={() => {
               push(<BundlerForm mode="EDIT" defaults={SingleBundleCodec.decode(item)} />, refreshCallback);
             }}
@@ -34,14 +34,14 @@ export default function ListEntry({ item, index, refreshCallback, listLength }: 
           <Action.CopyToClipboard
             title="Copy Bundle"
             content={item.urls.join("\n")}
-            shortcut={{ modifiers: ["cmd"], key: "y" }}
+            shortcut={Keyboard.Shortcut.Common.Copy}
           />
-          <ActionPanel.Submenu title="Delete Bundle" icon={Icon.Trash} shortcut={{ modifiers: ["cmd"], key: "d" }}>
+          <ActionPanel.Submenu title="Delete Bundle" icon={Icon.Trash} shortcut={Keyboard.Shortcut.Common.Remove}>
             <Action
               style={Action.Style.Destructive}
               icon={{ source: Icon.Warning, tintColor: Color.Red }}
-              title="Confirm Delete (this is irreversible)"
-              shortcut={{ modifiers: ["cmd"], key: "y" }}
+              title="Confirm Delete (This Is Irreversible)"
+              shortcut={Keyboard.Shortcut.Common.RemoveAll}
               onAction={() => {
                 deleteBundle(item.name)
                   .then(() =>
@@ -56,7 +56,7 @@ export default function ListEntry({ item, index, refreshCallback, listLength }: 
               icon={{ source: Icon.Undo }}
               title="Dismiss"
               onAction={refreshCallback}
-              shortcut={{ modifiers: ["cmd"], key: "n" }}
+              shortcut={Keyboard.Shortcut.Common.Refresh}
               autoFocus
             />
           </ActionPanel.Submenu>
@@ -65,7 +65,7 @@ export default function ListEntry({ item, index, refreshCallback, listLength }: 
               <Action
                 icon={Icon.TackDisabled}
                 title="Unpin Bundle"
-                shortcut={{ modifiers: ["cmd"], key: "m" }}
+                shortcut={Keyboard.Shortcut.Common.Pin}
                 onAction={() => {
                   pinBundle(item.name, false)
                     .then(() =>
@@ -80,7 +80,7 @@ export default function ListEntry({ item, index, refreshCallback, listLength }: 
               <Action
                 icon={Icon.Tack}
                 title="Pin Bundle"
-                shortcut={{ modifiers: ["cmd"], key: "m" }}
+                shortcut={Keyboard.Shortcut.Common.Pin}
                 onAction={() => {
                   pinBundle(item.name)
                     .then(() =>
@@ -97,7 +97,7 @@ export default function ListEntry({ item, index, refreshCallback, listLength }: 
                 icon={{ source: Icon.ArrowUp }}
                 title="Move to Top"
                 onAction={() => moveTop(item.name).then(refreshCallback)}
-                shortcut={{ modifiers: ["cmd"], key: "g" }}
+                shortcut={Keyboard.Shortcut.Common.MoveUp}
               />
             )}
             {index + 1 < listLength && (
@@ -105,7 +105,7 @@ export default function ListEntry({ item, index, refreshCallback, listLength }: 
                 icon={{ source: Icon.ArrowDown }}
                 title="Move to Bottom"
                 onAction={() => moveBottom(item.name).then(refreshCallback)}
-                shortcut={{ modifiers: ["shift", "cmd"], key: "g" }}
+                shortcut={Keyboard.Shortcut.Common.MoveDown}
               />
             )}
           </ActionPanel.Section>

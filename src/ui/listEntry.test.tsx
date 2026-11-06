@@ -28,6 +28,20 @@ vi.mock("@raycast/api", () => {
     }),
     Action,
     Icon: { Compass: "compass", Pencil: "pencil", Trash: "trash", Warning: "warning", Tack: "tack" },
+    Keyboard: {
+      Shortcut: {
+        Common: {
+          Copy: "copy-shortcut",
+          Edit: "edit-shortcut",
+          MoveDown: "move-down-shortcut",
+          MoveUp: "move-up-shortcut",
+          Pin: "pin-shortcut",
+          Refresh: "refresh-shortcut",
+          Remove: "remove-shortcut",
+          RemoveAll: "remove-all-shortcut",
+        },
+      },
+    },
     Color: { Red: "red" },
     open: mocks.open,
     showToast: mocks.showToast,
@@ -117,6 +131,21 @@ describe("ListEntry positioning actions", () => {
   });
 });
 
+describe("ListEntry shortcuts", () => {
+  it("uses the shared keyboard presets so they are not ambiguous across platforms", async () => {
+    const { root } = await render({ index: 1, listLength: 3 });
+
+    expect(actionElements(root, "Edit Bundle")?.props.shortcut).toBe("edit-shortcut");
+    expect(actionElements(root, "Copy Bundle")?.props.shortcut).toBe("copy-shortcut");
+    expect(actionElements(root, "Delete Bundle")?.props.shortcut).toBe("remove-shortcut");
+    expect(actionElements(root, "Confirm Delete (This Is Irreversible)")?.props.shortcut).toBe("remove-all-shortcut");
+    expect(actionElements(root, "Dismiss")?.props.shortcut).toBe("refresh-shortcut");
+    expect(actionElements(root, "Pin Bundle")?.props.shortcut).toBe("pin-shortcut");
+    expect(actionElements(root, "Move to Top")?.props.shortcut).toBe("move-up-shortcut");
+    expect(actionElements(root, "Move to Bottom")?.props.shortcut).toBe("move-down-shortcut");
+  });
+});
+
 describe("ListEntry pin action", () => {
   it("offers pin when unpinned and unpin when pinned", async () => {
     expect(actionTitles((await render()).root)).toContain("Pin Bundle");
@@ -144,7 +173,7 @@ describe("ListEntry action handlers", () => {
 
   it("deletes then toasts then refreshes", async () => {
     const refreshCallback = vi.fn();
-    await run("Confirm Delete (this is irreversible)", { refreshCallback });
+    await run("Confirm Delete (This Is Irreversible)", { refreshCallback });
 
     expect(mocks.deleteBundle).toHaveBeenCalledWith("Dev");
     expect(mocks.showToast).toHaveBeenCalledWith({ title: "Dev deleted." });

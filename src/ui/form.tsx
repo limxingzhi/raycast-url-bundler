@@ -1,6 +1,6 @@
 import { Action, ActionPanel, Form, showToast, useNavigation } from "@raycast/api";
 import { useCallback, useState } from "react";
-import { z, ZodError } from "zod";
+import { z, ZodError, type ZodIssue } from "zod";
 
 import { SingleBundleCodec, FormInputSchema, FormMode } from "../utils/schema";
 import { onSubmitBundle } from "../utils/data";
@@ -28,23 +28,16 @@ export default function BundlerForm({ mode, defaults }: BundlerFormProps) {
 
           pop(); // go back up the UI
         });
-      } catch (e: any) {
-        const errorOutput: Record<string, string> = {};
+      } catch (e: unknown) {
+        // validation issues can surface either as the issues array itself or as a ZodError
+        const issues = e instanceof ZodError ? e.issues : Array.isArray(e) ? (e as ZodIssue[]) : undefined;
+        if (!issues) throw e;
 
-        if (Array.isArray(e)) {
-          // error is an list off issues
-          e.map((item) => {
-            const path = item.path[0] as string;
-            errorOutput[path] = item.message;
-          });
-        } else {
-          // error is an object
-          (e as ZodError).issues.map((item) => {
-            const path = item.path[0] as string;
-            errorOutput[path] = item.message;
-          });
-          setError(errorOutput);
-        }
+        const errorOutput: Record<string, string> = {};
+        issues.forEach((item) => {
+          errorOutput[String(item.path[0])] = item.message;
+        });
+        setError(errorOutput);
       }
     },
     [mode, pop],
